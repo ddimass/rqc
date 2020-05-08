@@ -5,3 +5,4 @@ __pycache__
 data
 *.pyc
 venv
+static/node_modules
