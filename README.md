@@ -1,4 +1,17 @@
 ## FastAPI websockets with React Front
+```
+Tested in Python 3.7 64-bit environment
+```
+
+### Clone GIT
+```
+git clone https://github.com/ddimass/rqc.git
+```
+
+### Enter to Application dir
+```
+cd rqc
+```
 
 ### Install (Python 3)
 ```
