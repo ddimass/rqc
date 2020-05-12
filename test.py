@@ -12,12 +12,14 @@ Q = np.random.rand(30, 30) - 0.5
 solver = qboard.solver(mode="bf")
 
 
+count = 0
 def cb(dic):
     if dic["cb_type"] == qboard.constants.CB_TYPE_NEW_SOLUTION:
         energy_ = dic["energy"]
         spins_ = dic["spins"]
         print("New solution found, energy %f, result vector %s" % (energy_, spins_))
-        ws.add_message(energy_)
+        count += 1
+        ws.add_message({'dat': count, 'mess': energy_})
     if dic["cb_type"] == qboard.constants.CB_TYPE_INTERRUPT_TIMEOUT:
         print("Solver interrupted by timeout")
         ws.active = False
@@ -32,6 +34,25 @@ class Ws:
         self.sockets = []
         self.messages = []
         self.active = True
+        self.count = 0
+
+    def add_mess(self, dic):
+        if dic["cb_type"] == qboard.constants.CB_TYPE_NEW_SOLUTION:
+            energy_ = dic["energy"]
+            spins_ = dic["spins"]
+            print("New solution found, energy %f, result vector %s" % (energy_, spins_))
+            self.count += 1
+            self.messages.append({'dat': self.count, 'mess': energy_})
+        if dic["cb_type"] == qboard.constants.CB_TYPE_INTERRUPT_TIMEOUT:
+            print("Solver interrupted by timeout")
+            self.active = False
+            self.count = 0
+
+        if dic["cb_type"] == qboard.constants.CB_TYPE_INTERRUPT_TARGET:
+            print("Solver interrupted by target")
+            self.active = False
+            self.count = 0
+
 
     def add_message(self, message):
         self.messages.append(message)
@@ -43,7 +64,10 @@ class Ws:
     async def send_message(self):
         if self.messages:
             for ws_ in self.sockets:
-                await ws_.send_text(f"{self.messages.pop()}")
+                txt = await ws_.receive_text()
+                print(txt)
+                mess = self.messages.pop()
+                await ws_.send_text(f'{{"dat": {mess["dat"]}, "mess": {mess["mess"]} }}')
 
 
 ws = Ws()
@@ -98,8 +122,7 @@ async def websocket_endpoint(websocket: WebSocket):
     ws.active = True
     await websocket.accept()
     ws.add_client(websocket)
-    print(ws.sockets)
-    tr = threading.Thread(target=solver.solve_qubo, args=(Q,), kwargs={'callback': cb, 'timeout': 30, 'verbosity': 0})
+    tr = threading.Thread(target=solver.solve_qubo, args=(Q,), kwargs={'callback': ws.add_mess, 'timeout': 30, 'verbosity': 0})
     tr.start()
     while ws.active:
         await ws.send_message()
