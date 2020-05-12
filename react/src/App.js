@@ -6,9 +6,13 @@ import * as am4charts from "@amcharts/amcharts4/charts";
 import am4themes_animated from "@amcharts/amcharts4/themes/animated";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import {length} from "@amcharts/amcharts4/.internal/core/utils/Iterator";
-
-const client = new W3CWebSocket('ws://127.0.0.1:8000/ws');
-
+//188.72.76.54 101.100.20.10
+const client = new W3CWebSocket('ws://188.72.76.54:8000/ws');
+function compare(a, b) {
+  if (a['dat'] > b['dat']) return 1;
+  if (a['dat'] < b['dat']) return -1;
+  return 0;
+}
 am4core.useTheme(am4themes_animated);
 
 class App extends Component {
@@ -67,15 +71,19 @@ class App extends Component {
   componentWillMount() {
     client.onopen = () => {
       console.log('WebSocket Client Connected');
+      client.send('From socket');
     };
     client.onmessage = (message) => {
+      client.send('From socket');
       let data1 = this.state.data1;
-      let i = data1.length
-      data1.push({dat: i, mess: parseFloat(message.data)});
+      let mess = JSON.parse(message.data);
+      console.log(mess);
+      //console.log(message.data);
+      data1.push(mess);
+      data1.sort(compare);
       let chart = this.state.chart1;
       chart.data = data1;
       this.setState({data1: data1, chart1: chart});
-
     };
     this.forceUpdate();
   }
